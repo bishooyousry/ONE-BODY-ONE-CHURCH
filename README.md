@@ -1,12 +1,14 @@
-# One Body • One Church — Coptic Orthodox Youth Quiz
+# جسد واحد • كنيسة واحدة | One Body • One Church
 
-A bilingual Arabic/English, projector-friendly quiz game with a Coptic-inspired burgundy-and-gold visual theme, animated background, built-in sound effects and ambient music.
+لعبة تفاعلية تعليمية قصيرة باللغة العربية والإنجليزية، مناسبة للعرض على شاشة أو بروجكتور.
 
-## Publish with GitHub Pages
-1. Create a GitHub repository.
-2. Upload `index.html` to the repository root.
-3. Open **Settings → Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch**, select `main` and `/ (root)`, then save.
-5. Open the Pages URL shown by GitHub.
+## النشر على GitHub Pages
+1. ارفع ملف `index.html` إلى جذر مستودع GitHub.
+2. افتح **Settings → Pages**.
+3. اختر **Deploy from a branch** ثم `main` و`/(root)`.
+4. احفظ الإعدادات وافتح رابط GitHub Pages الذي سيظهر لك.
 
-Audio begins after the first user interaction because browsers restrict autoplay. Use the sound toggle in the header to enable or mute it. The game supports Arabic and English from the language toggle.
+## الصوت
+تحتوي اللعبة على خلفية صوتية أصلية مولدة داخل المتصفح، بطابع هادئ مستوحى من أجواء الترتيل القبطي: نغمات ممتدة، طبقات صوتية شبه كورالية، ولحن بطيء فوق قرار وخامسة ثابتين. ليست تسجيلا أو اقتباسا من لحن كنسي معروف. يبدأ الصوت بعد أول تفاعل من المستخدم بسبب قيود التشغيل التلقائي في المتصفحات. يمكن التحكم فيه من زر الصوت داخل اللعبة.
+
+لا تحتاج اللعبة إلى ملفات صوتية خارجية. الخطوط قد تحتاج إلى اتصال بالإنترنت لتحميلها، وتوجد خطوط بديلة عند عدم توفره.

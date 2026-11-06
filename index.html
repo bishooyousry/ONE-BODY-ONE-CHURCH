@@ -162,15 +162,94 @@ const data=[
 {cat:["الكنيسة الوحيدة • THE UNIQUE CHURCH","THE UNIQUE CHURCH"],q:["إيه اللي يخلّي الكنيسة أكتر من مجرد مبنى أو نادي اجتماعي؟","What makes the Church more than a building or social club?"],o:[["إنها جسد المسيح وشركة المؤمنين مع الله","She is Christ’s Body and the communion of believers with God"],["إن فيها أنشطة واجتماعات","She has activities and meetings"],["إن مبناها كبير","She has a large building"],["إننا بنقابل أصحابنا فيها","We meet our friends there"]],a:0,f:["الكنيسة مش مجرد مكان أو نشاط اجتماعي؛ هي جسد المسيح وشركة المؤمنين مع الله.","The Church is not merely a place or social activity; she is the Body of Christ and the communion of believers with God."]},
 {cat:["كل الشعوب والأجيال • ALL NATIONS & GENERATIONS","ALL NATIONS & GENERATIONS"],q:["مين مدعو يكون جزء من كنيسة المسيح؟","Who is invited to belong to Christ’s Church?"],o:[["شعب واحد بس","Only one nation"],["جيل واحد بس","Only one generation"],["كل الشعوب والأجيال","People from every nation and generation"],["الناس اللي عندها نفس المواهب","People with the same gifts"]],a:2,f:["دعوة المسيح لكل الأمم، والكنيسة ممتدة عبر الأجيال في الإيمان الرسولي، ونؤمن بشركة القديسين.","Christ’s invitation is for all nations. The Church continues through generations in the apostolic faith, and we believe in the communion of saints."]}
 ];
-let lang='ar',soundOn=true,idx=0,points=0,locked=false,lastAnswer=-2,lastAnswerCorrect=false,seconds=30,timer=null,audio=null,musicTimer=null,step=0;
+let lang='ar',soundOn=true,idx=0,points=0,locked=false,lastAnswer=-2,lastAnswerCorrect=false,seconds=30,timer=null,audio=null,musicTimer=null,musicBus=null,musicNodes=[],step=0;
 const $=id=>document.getElementById(id);
 function tr(pair){return pair[lang==='ar'?0:1]}
 function toggleLanguage(){lang=lang==='ar'?'en':'ar';document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';document.querySelectorAll('[data-ar]').forEach(el=>el.innerHTML=el.dataset[lang]);$('langBtn').textContent=lang==='ar'?'EN / عربي':'عربي / EN';$('soundBtn').textContent=lang==='ar'?(soundOn?'♫ الصوت: تشغيل':'♫ الصوت: إيقاف'):(soundOn?'♫ Sound: ON':'♫ Sound: OFF');if($('quiz').classList.contains('active'))renderQuestion();if($('result').classList.contains('active'))renderResult()}
 function initAudio(){if(!audio){audio=new (window.AudioContext||window.webkitAudioContext)()}if(audio.state==='suspended')audio.resume()}
 function tone(freq,duration,type='sine',volume=.06,delay=0){if(!soundOn)return;initAudio();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.0001,audio.currentTime+delay);g.gain.exponentialRampToValueAtTime(volume,audio.currentTime+delay+.025);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+delay+duration);o.connect(g);g.connect(audio.destination);o.start(audio.currentTime+delay);o.stop(audio.currentTime+delay+duration+.04)}
 function sfx(kind){if(!soundOn)return;if(kind==='correct'){tone(523,.22,'sine',.08);tone(659,.25,'sine',.07,.13);tone(784,.4,'sine',.06,.27)}else if(kind==='wrong'){tone(220,.28,'triangle',.055);tone(185,.38,'triangle',.05,.16)}else{tone(440,.09,'sine',.035)}}
-function startMusic(){if(!soundOn)return;initAudio();if(musicTimer)return;const notes=[196,246.94,293.66,246.94,174.61,220,261.63,220];musicTimer=setInterval(()=>{if(soundOn){tone(notes[step%notes.length],1.7,'sine',.012);tone(notes[(step+2)%notes.length]*2,1.1,'sine',.006,.12);step++}},1550)}
-function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}}
+// Original, chant-inspired ambient score: sustained fifth drone, soft choir-like layers
+// and a slow modal melody. It is not a recording or transcription of a church hymn.
+function makeMusicReverb(){
+ const convolver=audio.createConvolver(),length=Math.floor(audio.sampleRate*3.8);
+ const impulse=audio.createBuffer(2,length,audio.sampleRate);
+ for(let ch=0;ch<2;ch++){
+  const channel=impulse.getChannelData(ch);
+  for(let i=0;i<length;i++){
+   const fade=Math.pow(1-i/length,2.7);
+   channel[i]=(Math.random()*2-1)*fade*.42;
+  }
+ }
+ convolver.buffer=impulse;
+ return convolver;
+}
+function addMusicVoice(freq,level,detune=0,type='sine'){
+ const osc=audio.createOscillator(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+ osc.type=type;osc.frequency.value=freq;osc.detune.value=detune;
+ filter.type='lowpass';filter.frequency.value=1250;filter.Q.value=.35;
+ gain.gain.value=level;
+ osc.connect(filter);filter.connect(gain);gain.connect(musicBus);
+ osc.start();musicNodes.push(osc);
+}
+function chantLayer(freq,level,detune,startAt,duration,type='sine'){
+ const osc=audio.createOscillator(),filter=audio.createBiquadFilter(),gain=audio.createGain();
+ osc.type=type;osc.frequency.setValueAtTime(freq,startAt);osc.detune.value=detune;
+ filter.type='lowpass';filter.frequency.value=1450;filter.Q.value=.25;
+ gain.gain.setValueAtTime(.0001,startAt);
+ gain.gain.linearRampToValueAtTime(level,startAt+.72);
+ gain.gain.setValueAtTime(level,startAt+Math.max(.8,duration-1.05));
+ gain.gain.exponentialRampToValueAtTime(.0001,startAt+duration);
+ osc.connect(filter);filter.connect(gain);gain.connect(musicBus);
+ osc.start(startAt);osc.stop(startAt+duration+.08);
+ musicNodes.push(osc);
+}
+function playChantPhraseNote(){
+ if(!soundOn||!musicBus)return;
+ const motif=[293.66,349.23,392.00,440.00,392.00,349.23,329.63,293.66,261.63,293.66,349.23,392.00,440.00,392.00,349.23,293.66];
+ const freq=motif[step%motif.length],at=audio.currentTime+.08,duration=4.55;
+ // Three gently detuned voices create a warm, human/choral texture.
+ chantLayer(freq,.010,-5,at,duration,'triangle');
+ chantLayer(freq,.008,5,at,duration,'sine');
+ chantLayer(freq*2,.0025,0,at+.04,duration*.78,'sine');
+ // A quiet supporting interval appears occasionally, like a second chant voice.
+ if(step%4===2){
+  const harmony=motif[(step+2)%motif.length];
+  chantLayer(harmony,.0035,-2,at+.22,3.9,'sine');
+ }
+ step++;
+}
+function startMusic(){
+ if(!soundOn)return;
+ initAudio();
+ if(musicTimer)return;
+ musicBus=audio.createGain();
+ musicBus.gain.setValueAtTime(.0001,audio.currentTime);
+ musicBus.gain.linearRampToValueAtTime(.42,audio.currentTime+3.2);
+ const dry=audio.createGain();dry.gain.value=.72;
+ const reverb=makeMusicReverb(),wet=audio.createGain();wet.gain.value=.34;
+ musicBus.connect(dry);dry.connect(audio.destination);
+ musicBus.connect(reverb);reverb.connect(wet);wet.connect(audio.destination);
+ // Quiet tonic-and-fifth drone, held continuously beneath the melody.
+ addMusicVoice(146.83,.0065,-4,'sine');
+ addMusicVoice(146.83,.005,4,'sine');
+ addMusicVoice(220.00,.0045,-3,'sine');
+ addMusicVoice(220.00,.0035,3,'triangle');
+ addMusicVoice(293.66,.0018,0,'sine');
+ playChantPhraseNote();
+ musicTimer=setInterval(playChantPhraseNote,4550);
+}
+function stopMusic(){
+ if(musicTimer){clearInterval(musicTimer);musicTimer=null}
+ if(!musicBus)return;
+ const oldBus=musicBus,oldNodes=musicNodes.slice(),now=audio.currentTime;
+ musicBus=null;musicNodes=[];oldBus.gain.cancelScheduledValues(now);
+ oldBus.gain.setTargetAtTime(.0001,now,.72);
+ window.setTimeout(()=>{
+  oldNodes.forEach(node=>{try{node.stop()}catch(e){}});
+  try{oldBus.disconnect()}catch(e){}
+ },2600);
+}
 function toggleSound(){soundOn=!soundOn;$('soundBtn').textContent=lang==='ar'?(soundOn?'♫ الصوت: تشغيل':'♫ الصوت: إيقاف'):(soundOn?'♫ Sound: ON':'♫ Sound: OFF');if(soundOn){initAudio();startMusic();sfx('click')}else stopMusic()}
 function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active')}
 function digits(n){return lang==='ar'?String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]):String(n)}
